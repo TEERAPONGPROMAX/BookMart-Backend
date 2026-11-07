@@ -25,7 +25,9 @@ func (h *Handler) Routes() *http.ServeMux {
 	mux.HandleFunc("POST /api/auth/register", h.Register)
 	mux.HandleFunc("POST /api/auth/login", h.Login)
 	login := func(next http.Handler) http.Handler { return mw.RequireLogin(h.Tickets, next) }
-	admin := func(next http.Handler) http.Handler { return mw.RequireLogin(h.Tickets, mw.RequireRole("admin", next)) }
+	admin := func(next http.Handler) http.Handler {
+		return mw.RequireLogin(h.Tickets, mw.RequireRole(h.Store, "admin", next))
+	}
 	mux.Handle("GET /api/auth/me", login(http.HandlerFunc(h.Me)))
 	mux.Handle("PATCH /api/auth/profile", login(http.HandlerFunc(h.UpdateProfile)))
 	mux.Handle("PATCH /api/auth/password", login(http.HandlerFunc(h.ChangePassword)))
@@ -37,6 +39,7 @@ func (h *Handler) Routes() *http.ServeMux {
 	mux.Handle("GET /api/admin/orders", admin(http.HandlerFunc(h.ListAllOrders)))
 	mux.Handle("PATCH /api/admin/orders/{id}", admin(http.HandlerFunc(h.UpdateOrderStatus)))
 	mux.Handle("GET /api/admin/members", admin(http.HandlerFunc(h.ListMembers)))
+	mux.Handle("PATCH /api/admin/members/{id}/role", admin(http.HandlerFunc(h.UpdateMemberRole)))
 	return mux
 }
 

@@ -12,6 +12,7 @@ var (
 	ErrNotFound     = errors.New("not found")
 	ErrOutOfStock   = errors.New("หนังสือมีจำนวนไม่พอ")
 	ErrInvalidOrder = errors.New("invalid order")
+	ErrLastAdmin    = errors.New("cannot remove the last admin")
 )
 
 type Store struct{ Pool *pgxpool.Pool }
@@ -31,6 +32,8 @@ type Repository interface {
 	UpdateMemberName(context.Context, int64, string) (Member, error)
 	UpdatePassword(context.Context, int64, string) error
 	ListMembers(context.Context) ([]Member, error)
+	MemberRole(context.Context, int64) (string, error)
+	UpdateMemberRole(context.Context, int64, string) (Member, error)
 	CreateOrder(context.Context, int64, []OrderRequestItem) (Order, error)
 	ListOrders(context.Context, *int64) ([]Order, error)
 	UpdateOrderStatus(context.Context, int64, string) (Order, error)

@@ -35,9 +35,23 @@ func RequireLogin(issuer *auth.Issuer, next http.Handler) http.Handler {
 	})
 }
 
-func RequireRole(role string, next http.Handler) http.Handler {
+type RoleChecker interface {
+	MemberRole(context.Context, int64) (string, error)
+}
+
+func RequireRole(checker RoleChecker, role string, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if WhoFrom(r.Context()).Role != role {
+		who := WhoFrom(r.Context())
+		if who.Role != role {
+			deny(w, http.StatusForbidden, "บัญชีของคุณไม่มีสิทธิ์ทำรายการนี้")
+			return
+		}
+		currentRole, err := checker.MemberRole(r.Context(), who.ID)
+		if err != nil {
+			deny(w, http.StatusInternalServerError, "ตรวจสอบสิทธิ์ไม่สำเร็จ")
+			return
+		}
+		if currentRole != role {
 			deny(w, http.StatusForbidden, "บัญชีของคุณไม่มีสิทธิ์ทำรายการนี้")
 			return
 		}

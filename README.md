@@ -6,8 +6,8 @@ Go REST API แยก package ตามรูปแบบบทเรียน: 
 
 1. ติดตั้ง Go 1.22 ขึ้นไป และสร้าง Supabase project
 2. รัน `supabase/schema.sql` แล้ว `supabase/seed.sql` ใน Supabase SQL Editor
-3. ตั้ง environment variables ตาม `.env.example`: `DATABASE_URL`, `JWT_SECRET` (อย่างน้อย 32 ตัวอักษร), `CORS_ALLOWED_ORIGINS` (เริ่มต้นรวม `http://localhost:3000`)
-4. จากโฟลเดอร์นี้ รัน `go run .`; API จะฟังที่ `http://localhost:8080`
+3. คัดลอก `.env.example` เป็น `.env` แล้วใส่ `DATABASE_URL` จาก Supabase, ตั้ง `JWT_SECRET` แบบสุ่มอย่างน้อย 32 ตัวอักษร และคง `CORS_ALLOWED_ORIGINS=http://localhost:3000` ไว้สำหรับทดสอบในเครื่อง
+4. จากโฟลเดอร์นี้ รัน `go run .`; API จะอ่าน `.env` ให้อัตโนมัติและฟังที่ `http://localhost:8080`. ค่า Environment Variables ที่ตั้งบน Render จะมีลำดับความสำคัญกว่า `.env`
 5. ตั้งบัญชีสมาชิกเป็น Admin ผ่าน SQL:
    `update public.members set role='admin' where email='อีเมลทีม';`
    แล้วเข้าสู่ระบบใหม่

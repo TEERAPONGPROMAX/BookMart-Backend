@@ -1,12 +1,14 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"errors"
 	"log"
 	"net/http"
 	"os"
 	"os/signal"
+	"strconv"
 	"strings"
 	"syscall"
 	"time"
@@ -19,6 +21,7 @@ import (
 )
 
 func main() {
+	loadDotEnv(".env")
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
 		log.Fatal("DATABASE_URL ต้องตั้งค่าใน Environment Variables")
@@ -70,6 +73,43 @@ func main() {
 		defer cancel()
 		if err := server.Shutdown(shutdown); err != nil {
 			log.Printf("graceful shutdown: %v", err)
+		}
+	}
+}
+
+// loadDotEnv reads local development settings without overriding environment
+// variables supplied by the deployment platform.
+func loadDotEnv(path string) {
+	file, err := os.Open(path)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	scanner := bufio.NewScanner(file)
+	for scanner.Scan() {
+		line := strings.TrimSpace(scanner.Text())
+		if line == "" || strings.HasPrefix(line, "#") {
+			continue
+		}
+		key, value, ok := strings.Cut(line, "=")
+		if !ok {
+			continue
+		}
+		key = strings.TrimSpace(key)
+		value = strings.TrimSpace(value)
+		if key == "" {
+			continue
+		}
+		if len(value) >= 2 && value[0] == '"' && value[len(value)-1] == '"' {
+			if parsed, err := strconv.Unquote(value); err == nil {
+				value = parsed
+			}
+		} else if len(value) >= 2 && value[0] == '\'' && value[len(value)-1] == '\'' {
+			value = value[1 : len(value)-1]
+		}
+		if _, exists := os.LookupEnv(key); !exists {
+			_ = os.Setenv(key, value)
 		}
 	}
 }

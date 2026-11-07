@@ -73,6 +73,49 @@ func (s *Store) ListMembers(ctx context.Context) ([]Member, error) {
 	return members, rows.Err()
 }
 
+func (s *Store) MemberRole(ctx context.Context, id int64) (string, error) {
+	var role string
+	err := s.Pool.QueryRow(ctx, `SELECT role FROM members WHERE id=$1`, id).Scan(&role)
+	if err != nil {
+		return "", mapNoRows(err)
+	}
+	return role, nil
+}
+
+func (s *Store) UpdateMemberRole(ctx context.Context, id int64, role string) (Member, error) {
+	tx, err := s.Pool.Begin(ctx)
+	if err != nil {
+		return Member{}, err
+	}
+	defer tx.Rollback(ctx)
+	if _, err = tx.Exec(ctx, `LOCK TABLE members IN SHARE ROW EXCLUSIVE MODE`); err != nil {
+		return Member{}, err
+	}
+	var currentRole string
+	if err = tx.QueryRow(ctx, `SELECT role FROM members WHERE id=$1 FOR UPDATE`, id).Scan(&currentRole); err != nil {
+		return Member{}, mapNoRows(err)
+	}
+	if currentRole == "admin" && role == "member" {
+		var adminCount int
+		if err = tx.QueryRow(ctx, `SELECT count(*) FROM members WHERE role='admin'`).Scan(&adminCount); err != nil {
+			return Member{}, err
+		}
+		if adminCount <= 1 {
+			return Member{}, ErrLastAdmin
+		}
+	}
+	var member Member
+	err = tx.QueryRow(ctx, `UPDATE members SET role=$2 WHERE id=$1 RETURNING id,email,display_name,role`, id, role).
+		Scan(&member.ID, &member.Email, &member.Name, &member.Role)
+	if err != nil {
+		return Member{}, mapNoRows(err)
+	}
+	if err = tx.Commit(ctx); err != nil {
+		return Member{}, err
+	}
+	return member, nil
+}
+
 func mapNoRows(err error) error {
 	if err == pgx.ErrNoRows {
 		return ErrNotFound
